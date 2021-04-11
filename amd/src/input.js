@@ -471,7 +471,8 @@
                 // console.log((message.join("::")+" : '"+script.text+"'"))
                 if(MathJax.Localization.locale ==="de" && !script.translated){
                     script.translated=true;
-                    script.text=localizeToMathJaxLocale(script.text);
+                    // % for fixing firefox by chaning the not changed text
+                    script.text = localizeToMathJaxLocale(script.text) + "%";
                     MathJax.Hub.Update(script);
                 }
             });
