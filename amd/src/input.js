@@ -465,17 +465,99 @@
      * @param {String[]} inputs names of all the inputs that should have instant validation.
      */
     function initInputs(questionDivId, prefix, qaid, inputs, decsep) {
+        // let toUpdate = [];
+
+        // console.log('initInputs inputs', inputs)
+        let qdiv  =document.getElementById(questionDivId);
+
+        // translate all scripts that are created on server side
+        qdiv.querySelectorAll("script").forEach(script => {
+            if(script.id.includes("MathJax")){
+                // console.log('query', script.id, script.text)
+                if(script.type.includes("math/tex")){
+                    let mjscript = MathJax.Hub.getJaxFor(script.id);
+                    // MathJax.Hub.Update(element);
+                    // MathJax.Hub.Reprocess(element);
+                    if(MathJax.Localization.locale ==="de" && !script.translated){
+                        mjscript.translated=true;
+                        // % for fixing firefox by chaning the not changed text
+                        mjscript.text = localizeToMathJaxLocale(script.text) + " ";
+                        //  MathJax.Hub.Update(script);
+                        // toUpdate.push(script);
+                    }
+                }
+            }
+        });
+        // MathJax.Hub.Reprocess();
+        // console.log('all', all);
         if(window.MathJax){
+            let timeout = null;
+            // there is, as far as I see it, no MathJax hook for 'everything' is done, 
+            // so we hope that we hit a good timing where we can and update everything once
+            // Ideally we would upate the script, once we modified it, but that is not working properly.
+            // => doublecated displays of formulars or similar
+            // so this is more of a ugly workaround ... 
+            let resettimeout = () => {
+                // console.log('Reprocess')
+                if(timeout){
+                    clearTimeout(timeout);
+                }
+                timeout = setTimeout(() => {
+                    MathJax.Hub.Reprocess(qdiv);
+                    // console.log('Reprocess done')
+                }, 500);
+            };
+            // console.log("math,", MathJax);
+            // MathJax.Hub.Startup.signal.Interest(
+            //     function (message) {console.log("Startup: "+message)}
+            //   );
+            //   MathJax.Hub.signal.Interest(
+            //     function (message) {console.log("Hub: "+message)}
+            //   );
+
+            // translate all scripts that are created on the fly ... e.g. validation fields
             MathJax.Hub.Register.MessageHook("New Math Pending", function (message) {
                 let script = MathJax.Hub.getJaxFor(message[1]).SourceElement();
-                // console.log((message.join("::")+" : '"+script.text+"'"))
                 if(MathJax.Localization.locale ==="de" && !script.translated){
+                    // console.log("NMP:::",message[1], script.id, message, script);
                     script.translated=true;
                     // % for fixing firefox by chaning the not changed text
-                    script.text = localizeToMathJaxLocale(script.text) + "%";
-                    MathJax.Hub.Update(script);
+                    script.text = localizeToMathJaxLocale(script.text) + " ";
+                    // MathJax.Hub.Update(script);
+                    // MathJax.Hub.Reprocess(script);
+                    // toUpdate.push(script);
                 }
-            });
+                }
+            );
+
+              MathJax.Hub.Register.MessageHook("End Process", (message) => {
+                //   console.log('"End Process"', message, toUpdate);
+                //   toUpdate.forEach(element => {
+                //     // MathJax.Hub.Update(element);
+                //     if(!element.reprocessd){
+                //         element.reprocessd = true;
+                //         // MathJax.Hub.Reprocess(element);
+                //     }
+                //   });
+                //   MathJax.Hub.Update();
+                // if(!once){
+                //     console.log('ONCE ONCE ONCE')
+                //     once = true;
+                // }
+                resettimeout();
+              }
+              );
+
+            // MathJax.Hub.Register.MessageHook("New Math Pending", function (message) {
+            //     let script = MathJax.Hub.getJaxFor(message[1]).SourceElement();
+            //     console.log((message.join("::")+" : '"+script.text+"'"))
+            //     // if(MathJax.Localization.locale ==="de" && !script.translated){
+            //     //     script.translated=true;
+            //     //     // % for fixing firefox by chaning the not changed text
+            //     //     script.text = localizeToMathJaxLocale(script.text) + "%";
+            //     //     MathJax.Hub.Update(script);
+            //     // }
+            // });
         }
 
         var questionDiv = document.getElementById(questionDivId);
@@ -489,7 +571,10 @@
         // With JS With instant validation, we don't need the Check button, so hide it.
         if (allok && (questionDiv.classList.contains('dfexplicitvaildate') ||
                 questionDiv.classList.contains('dfcbmexplicitvaildate'))) {
-            questionDiv.querySelector('.im-controls input.submit').hidden = true;
+            let inputcontrol = questionDiv.querySelector('.im-controls input.submit');
+            if(inputcontrol) {
+                inputcontrol.hidden = true;
+            }
         }
     }
 
@@ -523,13 +608,15 @@
         element.hidden = true;
         input.parentElement.appendChild(element);
         input.orgname = input.name;
-        input.orgid = input.id;
+        if(input.id){
+            input.orgid = input.id;
+            input.id = input.id + "_translate";
+            element.id = input.id;
+        }
         input.orgvalue = input.value;
         input.value = localizeToLocale(input.orgvalue);
-        element.id = input.id;
         element.value = input.value;
         element.name = input.name;
-        input.id = input.id + "_translate";
         input.name = input.name + "_translate";
     }
 
@@ -545,6 +632,7 @@
         // See if it is an ordinary input.
         let input = questionDiv.querySelector('[name="' + prefix + name + '"]');
 
+        // console.log("decsep",decsep, input.name, input);
         if (input) {
             if(decsep === ','){
                 createShadowElement(input);
