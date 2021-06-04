@@ -610,12 +610,12 @@
         input.orgname = input.name;
         if(input.id){
             input.orgid = input.id;
-            input.id = input.id + "_translate";
             element.id = input.id;
+            input.id = input.id + "_translate";
         }
         input.orgvalue = input.value;
-        input.value = localizeToLocale(input.orgvalue);
         element.value = input.value;
+        input.value = localizeToLocale(input.orgvalue);
         element.name = input.name;
         input.name = input.name + "_translate";
     }
